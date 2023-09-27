@@ -19,3 +19,6 @@ def main() -> None:
         args.output_path,
         args.root_name,
     )
+
+
+main()
