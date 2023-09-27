@@ -7,7 +7,7 @@ Add the following to your `.pre-commit-config.yaml`:
 
 ```yaml
 -   repo: https://github.com/henriquegemignani/jsonschema-to-typeddict
-    rev: v1.0
+    rev: v1.0.1
     hooks:
     -   id: jsonschema-to-typeddict
         files: src/my_package/files/schema.json
