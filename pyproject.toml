@@ -9,6 +9,38 @@ readme = "README.md"
 license = {file = "LICENSE"}
 classifiers = ["License :: OSI Approved :: Apache Software License"]
 dynamic = ["version", "description"]
+requires-python = ">=3.8"
 
 [project.urls]
 Home = "https://github.com/henriquegemignani/jsonschema-to-typeddict"
+
+[tool.ruff]
+line-length = 120
+select = [
+    "E", "F", "W", "C90", "I", "UP", "C4",
+    "RSE",
+    "TCH",
+    "PTH",
+    "COM818", "COM819",
+    "ISC",
+    "PIE",
+
+    "PLC",
+    "PLE",
+    "PLR",
+    "PLW",
+]
+extend-ignore = [
+    "PLR0913",  # Too many arguments for function
+]
+src = ["src"]
+
+[tool.ruff.isort]
+# This is very desirable, but causes issues with py-cord and some usages of construct_pack.encode
+# required-imports = ["from __future__ import annotations"]
+
+[tool.black]
+line-length = 120
+
+[tool.mypy]
+files = ["src"]
