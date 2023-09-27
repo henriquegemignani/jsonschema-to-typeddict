@@ -6,9 +6,9 @@ from . import converter
 
 def create_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser()
+    parser.add_argument("--output-path", type=Path, required=True,help="Path to the generated stub file")
+    parser.add_argument("--root-name", type=str, required=True, help="Name of the root argument")
     parser.add_argument("schema_path", type=Path, help="Path to the jsonschema file")
-    parser.add_argument("output_path", type=Path, help="Path to the generated stub file")
-    parser.add_argument("root_name", type=str, help="Name of the root argument")
     return parser
 
 
