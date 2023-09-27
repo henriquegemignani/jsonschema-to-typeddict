@@ -127,6 +127,8 @@ def convert_schema_to(schema_path: Path, output: Path, root_name: str) -> None:
         schema = json.load(f)
 
     result = """# This file is generated. Manual changes will be lost
+# fmt: off
+# ruff: noqa
 from __future__ import annotations
 
 import typing

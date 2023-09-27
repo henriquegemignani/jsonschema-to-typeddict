@@ -71,7 +71,7 @@ jobs:
         shell: bash
 
       - name: test
-        run: python -m pytest --cov src --cov-report=xml --skip-if-missing
+        run: python -m pytest --cov src
 
       - name: codecov
         uses: codecov/codecov-action@v3

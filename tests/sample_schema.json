@@ -1,0 +1,136 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "properties": {
+        "$schema": {
+            "type": "string",
+            "format": "uri"
+        },
+        "field_a": {
+            "type": "object",
+            "additionalProperties": {
+                "type": "string"
+            }
+        },
+        "field_b": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "something": {
+                        "type": "number"
+                    }
+                }
+            },
+            "additionalProperties": true
+        },
+
+        "field_c": {
+            "type": "object",
+            "properties": {
+                "pickup_type": {
+                    "type": "string",
+                    "enum": [
+                        "actor",
+                        "emmi",
+                        "corex",
+                        "corpius",
+                        "cutscene"
+                    ]
+                }
+            },
+            "required": [
+                "pickup_type"
+            ],
+            "if": {
+                "properties": {
+                    "pickup_type": {
+                        "const": "actor"
+                    }
+                }
+            },
+            "then": {
+                "properties": {
+                    "model": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "minItems": 1
+                    }
+                },
+                "required": [
+                    "model"
+                ]
+            },
+            "else": {
+                "properties": {
+                    "pickup_lua_callback": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "pickup_lua_callback"
+                ],
+                "if": {
+                    "not": {
+                        "properties": {
+                            "pickup_type": {
+                                "const": "cutscene"
+                            }
+                        }
+                    }
+                },
+                "then": {
+                    "properties": {
+                        "pickup_actordef": {
+                            "type": "string",
+                            "pattern": "[a-zA-Z0-9_/]+?\\.bmsad"
+                        },
+                        "pickup_string_key": {
+                            "type": "string"
+                        }
+                    },
+                    "required": [
+                        "pickup_actordef",
+                        "pickup_string_key"
+                    ]
+                }
+            }
+        }
+    },
+    "required": [
+        "field_a",
+        "field_c"
+    ],
+    "additionalProperties": false,
+    "$defs": {
+        "dict_definition": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+                "nested_ref": {
+                    "$ref": "#/$defs/scenario_name"
+                },
+                "number": {
+                    "type": "integer",
+                    "default": 0
+                }
+            }
+        },
+        "scenario_name": {
+            "type": "string",
+            "enum": [
+                "s010_cave",
+                "s020_magma",
+                "s030_baselab",
+                "s040_aqua",
+                "s050_forest",
+                "s060_quarantine",
+                "s070_basesanc",
+                "s080_shipyard",
+                "s090_skybase"
+            ]
+        }
+    }
+}
