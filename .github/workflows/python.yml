@@ -96,11 +96,11 @@ jobs:
           name: python-package-distributions
           path: dist/
 
-      - name: Publish 📦 to TestPyPI
-        if: ${{ github.ref == 'refs/heads/main' }}
-        uses: pypa/gh-action-pypi-publish@release/v1
-        with:
-          repository-url: https://test.pypi.org/legacy/
+#      - name: Publish 📦 to TestPyPI
+#        if: ${{ github.ref == 'refs/heads/main' }}
+#        uses: pypa/gh-action-pypi-publish@release/v1
+#        with:
+#          repository-url: https://test.pypi.org/legacy/
 
       - name: Create GitHub release
         uses: svenstaro/upload-release-action@2.7.0
