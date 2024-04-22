@@ -3,40 +3,34 @@
 # ruff: noqa
 from __future__ import annotations
 
-import typing
+import typing_extensions as typ
 
 
-class DefDictDefinition(typing.TypedDict):
-    nested_ref: typing.NotRequired[def_scenario_name]
-    number: typing.NotRequired[int]
+# Definitions
+
+@typ.final
+class DictDefinition(typ.TypedDict, total=False):
+    nested_ref: ScenarioName
+    number: int
 
 
-def_dict_definition = DefDictDefinition
-def_scenario_name = str
+ScenarioName: typ.TypeAlias = str
 
 
-# The root object
+# Schema entries
+class SampleFieldBItem(typ.TypedDict, total=False):
+    something: float
 
-class SampleFieldA(typing.TypedDict, total=False):
-    pass
+class SampleFieldC(typ.TypedDict, total=False):
+    pickup_type: typ.Required[str]
+    model: list[str]
+    pickup_lua_callback: str
+    pickup_actordef: str
+    pickup_string_key: str
 
+@typ.final
+class Sample(typ.TypedDict):
+    field_a: dict[str, str]
+    field_b: typ.NotRequired[list[SampleFieldBItem]]
+    field_c: SampleFieldC
 
-class SampleFieldBItem(typing.TypedDict, total=False):
-    something: typing.NotRequired[float]
-
-
-class SampleFieldC(typing.TypedDict, total=False):
-    pickup_type: typing.Required[str]
-    model: typing.NotRequired[list[str]]
-    pickup_lua_callback: typing.NotRequired[str]
-    pickup_actordef: typing.NotRequired[str]
-    pickup_string_key: typing.NotRequired[str]
-
-
-class Sample(typing.TypedDict):
-    field_a: typing.Required[SampleFieldA]
-    field_b: typing.NotRequired[list[SampleFieldBItem]]
-    field_c: typing.Required[SampleFieldC]
-
-
-Sample = Sample
