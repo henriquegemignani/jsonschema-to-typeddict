@@ -33,4 +33,3 @@ class Sample(typ.TypedDict):
     field_a: dict[str, str]
     field_b: typ.NotRequired[list[SampleFieldBItem]]
     field_c: SampleFieldC
-

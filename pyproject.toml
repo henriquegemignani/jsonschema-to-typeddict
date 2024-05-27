@@ -22,6 +22,9 @@ test = [
 
 [tool.ruff]
 line-length = 120
+src = ["src"]
+
+[tool.ruff.lint]
 select = [
     "E", "F", "W", "C90", "I", "UP", "C4",
     "RSE",
@@ -37,16 +40,13 @@ select = [
     "PLW",
 ]
 extend-ignore = [
+    "ISC001",  # conflicts with formatter
     "PLR0913",  # Too many arguments for function
 ]
-src = ["src"]
 
-[tool.ruff.isort]
+[tool.ruff.lint.isort]
 # This is very desirable, but causes issues with py-cord and some usages of construct_pack.encode
 # required-imports = ["from __future__ import annotations"]
-
-[tool.black]
-line-length = 120
 
 [tool.mypy]
 files = ["src"]

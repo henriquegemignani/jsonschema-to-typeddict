@@ -15,7 +15,7 @@ def _snake_case_to_pascal_case(snake: str) -> str:
 def _convert_union(entry_name: str, alternatives: list) -> CodeResult:
     block_result = ""
     nested_inlines = []
-    
+
     single = len(alternatives) == 1
     for i, alternative in enumerate(alternatives):
         inner_name = entry_name if single else f"{entry_name}__any{i}"
@@ -64,11 +64,11 @@ def _convert_true_dict(entry_name: str, entry_value: dict) -> CodeResult:
         key_types.append(propertyNames)
     if patternProperties or not key_types:
         key_types.append({"type": "string"})
-    
+
     val_types = [alternative for _, alternative in patternProperties]
     if additionalProperties and isinstance(additionalProperties, dict):
         val_types.append(additionalProperties)
-    
+
     key = _convert_union(f"{entry_name}__key", key_types)
     val = _convert_union(f"{entry_name}", val_types)
 
@@ -95,7 +95,7 @@ def _convert_object_entry(entry_name: str, entry_value: dict) -> CodeResult:
         typed_dict.append("@typ.final")
 
     required_fields = entry_value.get("required", [])
-    properties.pop("$schema", None) # ignore the schema field, as it's invalid syntax and not interesting
+    properties.pop("$schema", None)  # ignore the schema field, as it's invalid syntax and not interesting
 
     type_name = _snake_case_to_pascal_case(entry_name)
     is_total = len(required_fields) > len(properties) - len(required_fields)
@@ -109,7 +109,7 @@ def _convert_object_entry(entry_name: str, entry_value: dict) -> CodeResult:
         inner = _convert_schema_entry(f"{entry_name}__{prop_name}", prop_value)
         if inner.block:
             block_result += f"{inner.block}\n"
-        
+
         if (prop_name in required_fields) == is_total:
             prop_inline = inner.inline
         elif prop_name in required_fields:
@@ -184,7 +184,7 @@ import typing_extensions as typ
 
     if defs:
         result += "# Definitions\n"
-    
+
     for def_name, def_value in defs.items():
         inner = _convert_schema_entry(def_name, def_value)
 
