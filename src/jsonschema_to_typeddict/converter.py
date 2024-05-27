@@ -199,9 +199,9 @@ import typing_extensions as typ
 
     root = _convert_schema_entry(root_name, schema)
     if root.block:
-        result += f"{root.block}\n"
+        result += root.block
 
     if root_name != root.inline:
-        result += f"{root_name}: typ.TypeAlias = {root.inline}\n"
+        result += f"\n{root_name}: typ.TypeAlias = {root.inline}\n"
 
     output.write_text(result)
