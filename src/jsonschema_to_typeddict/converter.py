@@ -8,6 +8,15 @@ class CodeResult(typing.NamedTuple):
     inline: str
 
 
+PRIMITIVE_TYPES = {
+    "string": "str",
+    "integer": "int",
+    "number": "float",
+    "boolean": "bool",
+    "null": "None",
+}
+
+
 def _snake_case_to_pascal_case(snake: str) -> str:
     return snake.replace("_", " ").title().replace(" ", "")
 
@@ -127,6 +136,14 @@ def _convert_object_entry(entry_name: str, entry_value: dict) -> CodeResult:
     return CodeResult(block_result, type_name)
 
 
+def _convert_enum_entry(entry_name: str, entry_value: dict) -> CodeResult:
+    # TODO: verify the type field matches the values in the enum field? or not, idk
+    values = [repr(value) for value in entry_value["enum"]]
+    inline = _snake_case_to_pascal_case(entry_name)
+    value_block = ",\n    ".join(values)
+    return CodeResult(f"{inline} = typ.Literal[\n    {value_block}\n]\n", inline)
+
+
 def _convert_schema_entry(entry_name: str, entry_value: dict) -> CodeResult:
     if "$ref" in entry_value:
         if "#/$defs/" not in entry_value["$ref"]:
@@ -137,23 +154,11 @@ def _convert_schema_entry(entry_name: str, entry_value: dict) -> CodeResult:
     if "anyOf" in entry_value:
         return _convert_any_of(entry_name, entry_value)
 
+    if "enum" in entry_value:
+        return _convert_enum_entry(entry_name, entry_value)
+
     entry_type = entry_value.get("type")
     match entry_type:
-        case "string":
-            inline_result = "str"
-
-        case "integer":
-            inline_result = "int"
-
-        case "number":
-            inline_result = "float"
-
-        case "boolean":
-            inline_result = "bool"
-
-        case "null":
-            inline_result = "None"
-
         case "array":
             return _convert_array_entry(entry_name, entry_value)
 
@@ -161,10 +166,10 @@ def _convert_schema_entry(entry_name: str, entry_value: dict) -> CodeResult:
             return _convert_object_entry(entry_name, entry_value)
 
         case _:
+            if entry_type in PRIMITIVE_TYPES:
+                return CodeResult("", PRIMITIVE_TYPES[entry_type])
             msg = f"Invalid entry at {entry_name}: unknown type {entry_type}"
             raise ValueError(msg)
-
-    return CodeResult("", inline_result)
 
 
 def convert_schema_to(schema_path: Path, output: Path, root_name: str) -> None:
@@ -185,17 +190,19 @@ import typing_extensions as typ
     if defs:
         result += "# Definitions\n"
 
-    for def_name, def_value in defs.items():
-        inner = _convert_schema_entry(def_name, def_value)
+        for def_name, def_value in defs.items():
+            inner = _convert_schema_entry(def_name, def_value)
 
-        if inner.block:
-            result += f"\n{inner.block}\n\n"
+            if inner.block:
+                result += f"{inner.block}\n"
 
-        def_pascal = _snake_case_to_pascal_case(def_name)
-        if def_pascal != inner.inline:
-            result += f"{def_pascal}: typ.TypeAlias = {inner.inline}\n"
+            def_pascal = _snake_case_to_pascal_case(def_name)
+            if def_pascal != inner.inline:
+                result += f"{def_pascal}: typ.TypeAlias = {inner.inline}\n"
 
-    result += "\n\n# Schema entries\n"
+        result += "\n"
+
+    result += "# Schema entries\n"
 
     root = _convert_schema_entry(root_name, schema)
     if root.block:

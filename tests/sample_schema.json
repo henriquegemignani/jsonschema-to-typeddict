@@ -10,6 +10,9 @@
             "type": "object",
             "additionalProperties": {
                 "type": "string"
+            },
+            "propertyNames": {
+                "$ref": "#/$defs/scenario_name"
             }
         },
         "field_b": {
@@ -130,6 +133,14 @@
                 "s070_basesanc",
                 "s080_shipyard",
                 "s090_skybase"
+            ]
+        },
+        "union_enum": {
+            "enum": [
+                "foo",
+                2403,
+                12.34,
+                null
             ]
         }
     }
