@@ -137,9 +137,11 @@ def _convert_object_entry(entry_name: str, entry_value: dict) -> CodeResult:
 
 
 def _convert_enum_entry(entry_name: str, entry_value: dict) -> CodeResult:
+    # TODO: verify the type field matches the values in the enum field? or not, idk
     values = [repr(value) for value in entry_value["enum"]]
     inline = _snake_case_to_pascal_case(entry_name)
-    return CodeResult(f"{inline} = typ.Literal[\n    {',\n    '.join(values)}\n]\n", inline)
+    value_block = ",\n    ".join(values)
+    return CodeResult(f"{inline} = typ.Literal[\n    {value_block}\n]\n", inline)
 
 
 def _convert_schema_entry(entry_name: str, entry_value: dict) -> CodeResult:
