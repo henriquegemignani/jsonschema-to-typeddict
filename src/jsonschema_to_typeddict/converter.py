@@ -6,45 +6,115 @@ from pathlib import Path
 class CodeResult(typing.NamedTuple):
     block: str
     inline: str
+    inline_docstring: str | None
+    default_value: typing.Any
 
 
-PRIMITIVE_TYPES = {
-    "string": "str",
-    "integer": "int",
-    "number": "float",
-    "boolean": "bool",
-    "null": "None",
-}
+def _get_docstring(entry_value: dict) -> list[str]:
+    docstring: list[str] = []
+
+    def _docstring_newline() -> None:
+        if docstring:
+            docstring.append("")
+
+    if "title" in entry_value:
+        _docstring_newline()
+        docstring.append(entry_value["title"])
+
+    if "description" in entry_value:
+        _docstring_newline()
+        docstring.append(entry_value["description"])
+
+    examples = []
+    if "examples" in entry_value:
+        examples.extend(entry_value["examples"])
+    if examples:
+        if "default" in entry_value:
+            examples.insert(0, entry_value["default"])
+        _docstring_newline()
+        docstring.append(f"Examples: {repr(examples)}")
+
+    return docstring
+
+
+def _get_default(entry_value: dict) -> typing.Any:
+    return entry_value.get("default", ...)
 
 
 def _snake_case_to_pascal_case(snake: str) -> str:
     return snake.replace("_", " ").title().replace(" ", "")
 
 
-def _convert_union(entry_name: str, alternatives: list) -> CodeResult:
+def _convert_union(entry_name: str, alternatives: list, defs: dict) -> CodeResult:
     block_result = ""
     nested_inlines = []
 
     single = len(alternatives) == 1
     for i, alternative in enumerate(alternatives):
         inner_name = entry_name if single else f"{entry_name}__any{i}"
-        inner = _convert_schema_entry(inner_name, alternative)
+        inner = _convert_schema_entry(inner_name, alternative, defs)
         if inner.block:
             block_result += f"{inner.block}\n"
         nested_inlines.append(inner.inline)
 
-    return CodeResult(block_result, " | ".join(nested_inlines))
+    return CodeResult(block_result, " | ".join(nested_inlines), None, None)
 
 
-def _convert_any_of(entry_name: str, entry_value: dict) -> CodeResult:
+def _range_metadata(
+    minimum: int | None, maximum: int | None, value_name: str, exclusive_min: bool = False, exclusive_max: bool = False
+) -> list:
+    annotations = []
+
+    max_compare = "<" if exclusive_max else "<="
+
+    if minimum is not None and maximum is not None:
+        if minimum == maximum:
+            annotations.append(f"{value_name} == {minimum}")
+        else:
+            min_compare = "<" if exclusive_min else "<="
+            annotations.append(f"{minimum} {min_compare} {value_name} {max_compare} {maximum}")
+    elif minimum is not None:
+        min_compare = ">" if exclusive_min else ">="
+        annotations.append(f"{value_name} {min_compare} {minimum}")
+    elif maximum is not None:
+        annotations.append(f"{value_name} {max_compare} {maximum}")
+
+    return annotations
+
+
+def _convert_any_of(entry_name: str, entry_value: dict, defs: dict) -> CodeResult:
     """Handle entries that have an anyOf key"""
-    return _convert_union(entry_name, entry_value["anyOf"])
+    return _convert_union(entry_name, entry_value["anyOf"], defs)
 
 
-def _convert_array_entry(entry_name: str, entry_value: dict) -> CodeResult:
+def _convert_array_entry(entry_name: str, entry_value: dict, defs: dict) -> CodeResult:
     """Handles that are type = array"""
-    inner = _convert_schema_entry(f"{entry_name}__item", entry_value["items"])
-    return CodeResult(inner.block, f"list[{inner.inline}]")
+    inner = _convert_schema_entry(f"{entry_name}__item", entry_value["items"], defs)
+    inline = f"list[{inner.inline}]"
+
+    annotations = []
+
+    annotations.extend(
+        _range_metadata(
+            entry_value.get("minItems"),
+            entry_value.get("maxItems"),
+            "len()",
+        )
+    )
+
+    unique = entry_value.get("uniqueItems")
+    if unique:
+        annotations.append("Unique items")
+
+    if annotations:
+        inline = f"typ.Annotated[{inline}, {repr(annotations)[1:-1]}]"
+
+    return CodeResult(
+        inner.block,
+        inline,
+        _get_docstring(entry_value),
+        _get_default(entry_value),
+    )
 
 
 def _merge_conditional_into(entry_value: dict, alternative: dict) -> None:
@@ -62,7 +132,7 @@ def _merge_conditionals_into_main(entry_value: dict) -> None:
             _merge_conditional_into(entry_value, alternative)
 
 
-def _convert_true_dict(entry_name: str, entry_value: dict) -> CodeResult:
+def _convert_true_dict(entry_name: str, entry_value: dict, defs: dict) -> CodeResult:
     """Handles objects with no properties, and patternProperties or additionalProperties as schemas"""
     additionalProperties = entry_value.get("additionalProperties", True)
     patternProperties = entry_value.get("patternProperties", {})
@@ -78,15 +148,39 @@ def _convert_true_dict(entry_name: str, entry_value: dict) -> CodeResult:
     if additionalProperties and isinstance(additionalProperties, dict):
         val_types.append(additionalProperties)
 
-    key = _convert_union(f"{entry_name}__key", key_types)
-    val = _convert_union(f"{entry_name}", val_types)
+    key = _convert_union(f"{entry_name}__key", key_types, defs)
+    val = _convert_union(f"{entry_name}", val_types, defs)
 
     block = f"{key.block}{val.block}"
     inline = f"dict[{key.inline}, {val.inline}]"
-    return CodeResult(block, inline)
+
+    annotations = _range_metadata(
+        entry_value.get("minProperties"),
+        entry_value.get("maxProperties"),
+        "len()",
+    )
+
+    if annotations:
+        inline = f"typ.Annotated[{inline}, {repr(annotations)[1:-1]}]"
+
+    return CodeResult(block, inline, _get_docstring(entry_value), _get_default(entry_value))
 
 
-def _convert_object_entry(entry_name: str, entry_value: dict) -> CodeResult:
+def _block_docstring(docstring: list[str]) -> list[str]:
+    result = []
+    if docstring:
+        if len(docstring) == 1:
+            result.append(f'    """{docstring[0]}"""')
+        else:
+            result.append('    """')
+            for line in docstring:
+                result.append(f"    {line}")
+            result.append('    """')
+        result.append("")
+    return result
+
+
+def _convert_object_entry(entry_name: str, entry_value: dict, defs: dict) -> CodeResult:
     """Handles that are type = object"""
     block_result = ""
 
@@ -97,7 +191,7 @@ def _convert_object_entry(entry_name: str, entry_value: dict) -> CodeResult:
     patternProperties = entry_value.get("patternProperties", {})
 
     if not properties and (patternProperties or isinstance(additionalProperties, dict)):
-        return _convert_true_dict(entry_name, entry_value)
+        return _convert_true_dict(entry_name, entry_value, defs)
 
     typed_dict = []
     if not additionalProperties:
@@ -114,8 +208,11 @@ def _convert_object_entry(entry_name: str, entry_value: dict) -> CodeResult:
     else:
         typed_dict.append(f"class {type_name}(typ.TypedDict, total=False):")
 
+    docstring = _get_docstring(entry_value)
+    typed_dict.extend(_block_docstring(docstring))
+
     for prop_name, prop_value in properties.items():
-        inner = _convert_schema_entry(f"{entry_name}__{prop_name}", prop_value)
+        inner = _convert_schema_entry(f"{entry_name}__{prop_name}", prop_value, defs)
         if inner.block:
             block_result += f"{inner.block}\n"
 
@@ -126,50 +223,136 @@ def _convert_object_entry(entry_name: str, entry_value: dict) -> CodeResult:
         else:
             prop_inline = f"typ.NotRequired[{inner.inline}]"
 
+        if inner.default_value is not ...:
+            prop_inline += f" = {repr(inner.default_value)}"
+
         typed_dict.append(f"    {prop_name}: {prop_inline}")
+
+        typed_dict.extend(_block_docstring(inner.inline_docstring))
 
     if len(typed_dict) == 1:
         typed_dict.append("    pass")
 
     merged_dict = "\n".join(typed_dict)
     block_result += f"{merged_dict}\n"
-    return CodeResult(block_result, type_name)
+
+    desc = entry_value.get("description")
+    inline_doc = [desc] if desc is not None else None
+
+    return CodeResult(block_result, type_name, inline_doc, _get_default(entry_value))
 
 
-def _convert_enum_entry(entry_name: str, entry_value: dict) -> CodeResult:
+def _convert_enum_entry(entry_name: str, entry_value: dict, defs: dict) -> CodeResult:
     # TODO: verify the type field matches the values in the enum field? or not, idk
     values = [repr(value) for value in entry_value["enum"]]
     inline = _snake_case_to_pascal_case(entry_name)
     value_block = ",\n    ".join(values)
-    return CodeResult(f"{inline} = typ.Literal[\n    {value_block}\n]\n", inline)
+    return CodeResult(
+        f"{inline} = typ.Literal[\n    {value_block}\n]\n",
+        inline,
+        _get_docstring(entry_value),
+        _get_default(entry_value),
+    )
 
 
-def _convert_schema_entry(entry_name: str, entry_value: dict) -> CodeResult:
+PRIMITIVE_TYPES = {
+    "string": "str",
+    "integer": "int",
+    "number": "float",
+    "boolean": "bool",
+    "null": "None",
+}
+
+
+def _string_metadata(entry_value: dict) -> list:
+    annotations = []
+
+    annotations.extend(_range_metadata(entry_value.get("minLength"), entry_value.get("maxLength"), "len()"))
+
+    pattern = entry_value.get("pattern")
+    if pattern is not None:
+        annotations.append(f"/{pattern}/")
+
+    return annotations
+
+
+def _number_metadata(entry_value: dict) -> list:
+    annotations = []
+
+    minimum = entry_value.get("minimum")
+    exclusive_min = entry_value.get("exclusiveMinimum")
+    if exclusive_min is not None:
+        minimum = exclusive_min
+        exclusive_min = True
+
+    maximum = entry_value.get("maximum")
+    exclusive_max = entry_value.get("exclusiveMaximum")
+    if exclusive_max is not None:
+        maximum = exclusive_max
+        exclusive_max = True
+
+    annotations.extend(_range_metadata(minimum, maximum, "value", exclusive_min, exclusive_max))
+
+    multiple_of = entry_value.get("multipleOf")
+    if multiple_of is not None:
+        annotations.append(f"value % {multiple_of} == 0")
+
+    return annotations
+
+
+def _convert_primitive_entry(entry_name: str, entry_value: dict, defs: dict) -> CodeResult:
+    entry_type = entry_value.get("type")
+    inline = PRIMITIVE_TYPES[entry_type]
+
+    annotations = []
+    annotations.extend(_string_metadata(entry_value))
+    annotations.extend(_number_metadata(entry_value))
+
+    if annotations:
+        inline = f"typ.Annotated[{inline}, {repr(annotations)[1:-1]}]"
+
+    return CodeResult(
+        "",
+        inline,
+        _get_docstring(entry_value),
+        _get_default(entry_value),
+    )
+
+
+def _convert_schema_entry(entry_name: str, entry_value: dict, defs: dict) -> CodeResult:
     if "$ref" in entry_value:
         if "#/$defs/" not in entry_value["$ref"]:
             msg = f"Invalid entry at {entry_name}: only $defs are supported in $ref ({entry_value})"
             raise ValueError(msg)
-        return CodeResult("", _snake_case_to_pascal_case(entry_value["$ref"][8:]))
+
+        def_id = entry_value["$ref"][8:]
+
+        combined_value = defs.get(def_id, {})
+        combined_value.update(entry_value)
+
+        return CodeResult(
+            "", _snake_case_to_pascal_case(def_id), _get_docstring(combined_value), _get_default(combined_value)
+        )
 
     if "anyOf" in entry_value:
-        return _convert_any_of(entry_name, entry_value)
+        return _convert_any_of(entry_name, entry_value, defs)
 
     if "enum" in entry_value:
-        return _convert_enum_entry(entry_name, entry_value)
+        return _convert_enum_entry(entry_name, entry_value, defs)
 
     entry_type = entry_value.get("type")
     match entry_type:
         case "array":
-            return _convert_array_entry(entry_name, entry_value)
+            return _convert_array_entry(entry_name, entry_value, defs)
 
         case "object":
-            return _convert_object_entry(entry_name, entry_value)
+            return _convert_object_entry(entry_name, entry_value, defs)
 
         case _:
-            if entry_type in PRIMITIVE_TYPES:
-                return CodeResult("", PRIMITIVE_TYPES[entry_type])
-            msg = f"Invalid entry at {entry_name}: unknown type {entry_type}"
-            raise ValueError(msg)
+            if entry_type not in PRIMITIVE_TYPES:
+                msg = f"Invalid entry at {entry_name}: unknown type {entry_type}"
+                raise ValueError(msg)
+            return _convert_primitive_entry(entry_name, entry_value, defs)
 
 
 def convert_schema_to(schema_path: Path, output: Path, root_name: str) -> None:
@@ -191,7 +374,7 @@ import typing_extensions as typ
         result += "# Definitions\n"
 
         for def_name, def_value in defs.items():
-            inner = _convert_schema_entry(def_name, def_value)
+            inner = _convert_schema_entry(def_name, def_value, {})
 
             if inner.block:
                 result += f"{inner.block}\n"
@@ -204,7 +387,7 @@ import typing_extensions as typ
 
     result += "# Schema entries\n"
 
-    root = _convert_schema_entry(root_name, schema)
+    root = _convert_schema_entry(root_name, schema, defs)
     if root.block:
         result += root.block
 

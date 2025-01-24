@@ -9,8 +9,16 @@ import typing_extensions as typ
 # Definitions
 @typ.final
 class DictDefinition(typ.TypedDict):
+    """
+    Title
+    
+    A description of the schema.
+    
+    Examples: [{'nested_ref': 's010_cave', 'number': 0}, {'nested_ref': 's020_magma', 'number': 1}]
+    """
+
     nested_ref: ScenarioName
-    number: int
+    number: typ.Annotated[int, '0 <= value < 100'] = 0
 
 ScenarioName = typ.Literal[
     's010_cave',
@@ -46,9 +54,9 @@ SampleComplexNonTotalObjectPickupType = typ.Literal[
 
 class SampleComplexNonTotalObject(typ.TypedDict, total=False):
     pickup_type: typ.Required[SampleComplexNonTotalObjectPickupType]
-    model: list[str]
+    model: typ.Annotated[list[str], 'len() >= 1']
     pickup_lua_callback: str
-    pickup_actordef: str
+    pickup_actordef: typ.Annotated[str, '/[a-zA-Z0-9_/]+?\\.bmsad/']
     pickup_string_key: str
 
 @typ.final
