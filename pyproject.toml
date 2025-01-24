@@ -1,6 +1,6 @@
 [build-system]
-requires = ["flit_core >=3.2,<4"]
-build-backend = "flit_core.buildapi"
+requires = ["flit_scm"]
+build-backend = "flit_scm:buildapi"
 
 [project]
 name = "jsonschema_to_typeddict"
@@ -50,6 +50,9 @@ extend-ignore = [
 
 [tool.mypy]
 files = ["src"]
+
+[tool.setuptools_scm]
+write_to = "src/jsonschema_to_typeddict/_version.py"
 
 [tool.pytest.ini_options]
 addopts = "--cov"
