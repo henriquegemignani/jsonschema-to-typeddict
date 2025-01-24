@@ -54,7 +54,7 @@ jobs:
           - {version: '3.10'}
           - {version: '3.11'}
           - {version: '3.12'}
-          - {version: "3.13.0-beta - 3.13.0"}
+          - {version: '3.13'}
 
     steps:
       - name: Checkout
@@ -76,7 +76,7 @@ jobs:
         shell: bash
 
       - name: test
-        run: python -m pytest --cov src
+        run: python -m pytest
 
       - name: codecov
         uses: codecov/codecov-action@v5
@@ -103,17 +103,6 @@ jobs:
 #        uses: pypa/gh-action-pypi-publish@release/v1
 #        with:
 #          repository-url: https://test.pypi.org/legacy/
-
-      - name: Create GitHub release
-        uses: svenstaro/upload-release-action@2.9.0
-        if: ${{ startsWith(github.ref, 'refs/tags/') }}
-        with:
-          repo_token: ${{ secrets.GITHUB_TOKEN }}
-          file: dist/*
-          file_glob: true
-          tag: ${{ github.ref }}
-          overwrite: true
-          body: "New release"
 
       - name: Publish 📦 to PyPI
         if: ${{ startsWith(github.ref, 'refs/tags/') }}
