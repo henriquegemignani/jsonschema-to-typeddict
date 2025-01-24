@@ -2,6 +2,8 @@ import json
 import typing
 from pathlib import Path
 
+NoDefault = object()
+
 
 class CodeResult(typing.NamedTuple):
     block: str
@@ -11,6 +13,7 @@ class CodeResult(typing.NamedTuple):
 
 
 def _get_docstring(entry_value: dict) -> list[str]:
+    """Creates a docstring for the entry based on the schema metadata"""
     docstring: list[str] = []
 
     def _docstring_newline() -> None:
@@ -32,13 +35,15 @@ def _get_docstring(entry_value: dict) -> list[str]:
         if "default" in entry_value:
             examples.insert(0, entry_value["default"])
         _docstring_newline()
-        docstring.append(f"Examples: {repr(examples)}")
+        docstring.append("Examples:")
+        docstring.extend(f"    `{repr(example)}`" for example in examples)
 
     return docstring
 
 
 def _get_default(entry_value: dict) -> typing.Any:
-    return entry_value.get("default", ...)
+    """Safely returns the default value for the schema"""
+    return entry_value.get("default", NoDefault)
 
 
 def _snake_case_to_pascal_case(snake: str) -> str:
@@ -46,6 +51,7 @@ def _snake_case_to_pascal_case(snake: str) -> str:
 
 
 def _convert_union(entry_name: str, alternatives: list, defs: dict) -> CodeResult:
+    """Convert a union to a CodeResult"""
     block_result = ""
     nested_inlines = []
 
@@ -63,6 +69,7 @@ def _convert_union(entry_name: str, alternatives: list, defs: dict) -> CodeResul
 def _range_metadata(
     minimum: int | None, maximum: int | None, value_name: str, exclusive_min: bool = False, exclusive_max: bool = False
 ) -> list:
+    """Get an annotation for the given range, if applicable"""
     annotations = []
 
     max_compare = "<" if exclusive_max else "<="
@@ -167,14 +174,14 @@ def _convert_true_dict(entry_name: str, entry_value: dict, defs: dict) -> CodeRe
 
 
 def _block_docstring(docstring: list[str]) -> list[str]:
+    """Convert a list of docstring lines to a list of lines for an indented docstring"""
     result = []
     if docstring:
         if len(docstring) == 1:
             result.append(f'    """{docstring[0]}"""')
         else:
             result.append('    """')
-            for line in docstring:
-                result.append(f"    {line}")
+            result.extend(f"    {line}" for line in docstring)
             result.append('    """')
         result.append("")
     return result
@@ -223,7 +230,7 @@ def _convert_object_entry(entry_name: str, entry_value: dict, defs: dict) -> Cod
         else:
             prop_inline = f"typ.NotRequired[{inner.inline}]"
 
-        if inner.default_value is not ...:
+        if inner.default_value is not NoDefault:
             prop_inline += f" = {repr(inner.default_value)}"
 
         typed_dict.append(f"    {prop_name}: {prop_inline}")
@@ -243,6 +250,7 @@ def _convert_object_entry(entry_name: str, entry_value: dict, defs: dict) -> Cod
 
 
 def _convert_enum_entry(entry_name: str, entry_value: dict, defs: dict) -> CodeResult:
+    """Convert entries with an `enum` field"""
     # TODO: verify the type field matches the values in the enum field? or not, idk
     values = [repr(value) for value in entry_value["enum"]]
     inline = _snake_case_to_pascal_case(entry_name)
@@ -265,6 +273,7 @@ PRIMITIVE_TYPES = {
 
 
 def _string_metadata(entry_value: dict) -> list:
+    """Returns annotations for string-type metadata"""
     annotations = []
 
     annotations.extend(_range_metadata(entry_value.get("minLength"), entry_value.get("maxLength"), "len()"))
@@ -277,6 +286,7 @@ def _string_metadata(entry_value: dict) -> list:
 
 
 def _number_metadata(entry_value: dict) -> list:
+    """Returns annotations for number-type metadata"""
     annotations = []
 
     minimum = entry_value.get("minimum")
@@ -301,8 +311,8 @@ def _number_metadata(entry_value: dict) -> list:
 
 
 def _convert_primitive_entry(entry_name: str, entry_value: dict, defs: dict) -> CodeResult:
-    entry_type = entry_value.get("type")
-    inline = PRIMITIVE_TYPES[entry_type]
+    """Converts entries of primitive type"""
+    inline = PRIMITIVE_TYPES[entry_value["type"]]
 
     annotations = []
     annotations.extend(_string_metadata(entry_value))

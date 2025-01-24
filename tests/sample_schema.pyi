@@ -15,7 +15,9 @@ class DictDefinition(typ.TypedDict):
     
     A description of the schema.
     
-    Examples: [{'nested_ref': 's010_cave', 'number': 0}, {'nested_ref': 's020_magma', 'number': 1}]
+    Examples:
+        `{'nested_ref': 's010_cave', 'number': 0}`
+        `{'nested_ref': 's020_magma', 'number': 1}`
     """
 
     nested_ref: ScenarioName
