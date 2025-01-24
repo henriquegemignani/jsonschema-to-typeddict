@@ -6,7 +6,7 @@
             "type": "string",
             "format": "uri"
         },
-        "field_a": {
+        "basic_dict": {
             "type": "object",
             "additionalProperties": {
                 "type": "string"
@@ -15,7 +15,7 @@
                 "$ref": "#/$defs/scenario_name"
             }
         },
-        "field_b": {
+        "basic_array": {
             "type": "array",
             "items": {
                 "type": "object",
@@ -24,11 +24,10 @@
                         "type": "number"
                     }
                 }
-            },
-            "additionalProperties": true
+            }
         },
 
-        "field_c": {
+        "complex_non_total_object": {
             "type": "object",
             "properties": {
                 "pickup_type": {
@@ -100,12 +99,30 @@
                     ]
                 }
             }
+        },
+        "basic_pattern_properties_dict": {
+            "type": "object",
+            "patternProperties": {
+                "[0-9]+": {
+                    "$ref": "#/$defs/scenario_name"
+                }
+            }
+        },
+        "complex_dict": {
+            "type": "object",
+            "patternProperties": {
+                "[0-9]+": {
+                    "$ref": "#/$defs/scenario_name"
+                }
+            },
+            "propertyNames": {
+                "$ref": "#/$defs/scenario_name"
+            },
+            "additionalProperties": {
+                "type": "string"
+            }
         }
     },
-    "required": [
-        "field_a",
-        "field_c"
-    ],
     "additionalProperties": false,
     "$defs": {
         "dict_definition": {
@@ -119,7 +136,11 @@
                     "type": "integer",
                     "default": 0
                 }
-            }
+            },
+            "required": [
+                "nested_ref",
+                "number"
+            ]
         },
         "scenario_name": {
             "type": "string",

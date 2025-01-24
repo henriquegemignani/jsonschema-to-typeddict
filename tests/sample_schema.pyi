@@ -8,7 +8,7 @@ import typing_extensions as typ
 
 # Definitions
 @typ.final
-class DictDefinition(typ.TypedDict, total=False):
+class DictDefinition(typ.TypedDict):
     nested_ref: ScenarioName
     number: int
 
@@ -33,10 +33,10 @@ UnionEnum = typ.Literal[
 
 
 # Schema entries
-class SampleFieldBItem(typ.TypedDict, total=False):
+class SampleBasicArrayItem(typ.TypedDict, total=False):
     something: float
 
-SampleFieldCPickupType = typ.Literal[
+SampleComplexNonTotalObjectPickupType = typ.Literal[
     'actor',
     'emmi',
     'corex',
@@ -44,15 +44,17 @@ SampleFieldCPickupType = typ.Literal[
     'cutscene'
 ]
 
-class SampleFieldC(typ.TypedDict, total=False):
-    pickup_type: typ.Required[SampleFieldCPickupType]
+class SampleComplexNonTotalObject(typ.TypedDict, total=False):
+    pickup_type: typ.Required[SampleComplexNonTotalObjectPickupType]
     model: list[str]
     pickup_lua_callback: str
     pickup_actordef: str
     pickup_string_key: str
 
 @typ.final
-class Sample(typ.TypedDict):
-    field_a: dict[ScenarioName, str]
-    field_b: typ.NotRequired[list[SampleFieldBItem]]
-    field_c: SampleFieldC
+class Sample(typ.TypedDict, total=False):
+    basic_dict: dict[ScenarioName, str]
+    basic_array: list[SampleBasicArrayItem]
+    complex_non_total_object: SampleComplexNonTotalObject
+    basic_pattern_properties_dict: dict[str, ScenarioName]
+    complex_dict: dict[ScenarioName | str, ScenarioName | str]
