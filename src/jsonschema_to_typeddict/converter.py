@@ -74,7 +74,7 @@ def _convert_true_dict(entry_name: str, entry_value: dict) -> CodeResult:
     if patternProperties or not key_types:
         key_types.append({"type": "string"})
 
-    val_types = [alternative for _, alternative in patternProperties]
+    val_types = [alternative for _, alternative in patternProperties.items()]
     if additionalProperties and isinstance(additionalProperties, dict):
         val_types.append(additionalProperties)
 
