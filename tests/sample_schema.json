@@ -128,13 +128,27 @@
         "dict_definition": {
             "type": "object",
             "additionalProperties": false,
+            "title": "Title",
+            "description": "A description of the schema.",
+            "default": {
+                "nested_ref": "s010_cave",
+                "number": 0
+            },
+            "examples": [
+                {
+                    "nested_ref": "s020_magma",
+                    "number": 1
+                }
+            ],
             "properties": {
                 "nested_ref": {
                     "$ref": "#/$defs/scenario_name"
                 },
                 "number": {
                     "type": "integer",
-                    "default": 0
+                    "default": 0,
+                    "minimum": 0,
+                    "exclusiveMaximum": 100
                 }
             },
             "required": [
