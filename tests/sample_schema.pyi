@@ -10,18 +10,8 @@ import typing_extensions as typ
 # Definitions
 @typ.final
 class DictDefinition(typ.TypedDict):
-    """
-    Title
-    
-    A description of the schema.
-    
-    Examples:
-        `{'nested_ref': 's010_cave', 'number': 0}`
-        `{'nested_ref': 's020_magma', 'number': 1}`
-    """
-
     nested_ref: ScenarioName
-    number: typ.Annotated[int, '0 <= value < 100'] = 0
+    number: int
 
 ScenarioName = typ.Literal[
     's010_cave',
@@ -62,6 +52,27 @@ class SampleComplexNonTotalObject(typ.TypedDict, total=False):
     pickup_actordef: typ.Annotated[str, '/[a-zA-Z0-9_/]+?\\.bmsad/']
     pickup_string_key: str
 
+class SampleMetadata(typ.TypedDict):
+    """
+    Title
+    
+    A description of the schema.
+    
+    Examples:
+        `{'nested_ref': 's010_cave', 'number': 0, 'array': [1.0], 'dict': {'foo': True, 'bar': False}}`
+        `{'nested_ref': 's020_magma', 'number': 1, 'array': [2, 3.4], 'dict': {'foo': True, 'bar': False}}`
+    """
+
+    string: typ.Annotated[str, 'len() <= 15']
+    """
+    Examples:
+        `'s010_cave'`
+    """
+
+    number: typ.Annotated[int, '0 <= value < 100'] = 0
+    array: typ.Annotated[list[float], 'len() >= 1', 'Unique items']
+    dict: typ.Annotated[dict[str, bool], 'len() == 2']
+
 @typ.final
 class Sample(typ.TypedDict, total=False):
     basic_dict: dict[ScenarioName, str]
@@ -69,3 +80,5 @@ class Sample(typ.TypedDict, total=False):
     complex_non_total_object: SampleComplexNonTotalObject
     basic_pattern_properties_dict: dict[str, ScenarioName]
     complex_dict: dict[ScenarioName | str, ScenarioName | str]
+    metadata: SampleMetadata = {'nested_ref': 's010_cave', 'number': 0, 'array': [1.0], 'dict': {'foo': True, 'bar': False}}
+    """A description of the schema."""

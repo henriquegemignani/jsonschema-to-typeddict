@@ -121,6 +121,64 @@
             "additionalProperties": {
                 "type": "string"
             }
+        },
+        "metadata": {
+            "type": "object",
+            "title": "Title",
+            "description": "A description of the schema.",
+            "default": {
+                "nested_ref": "s010_cave",
+                "number": 0,
+                "array": [1.0],
+                "dict": {"foo": true, "bar": false}
+            },
+            "examples": [
+                {
+                    "nested_ref": "s020_magma",
+                    "number": 1,
+                    "array": [2, 3.4],
+                    "dict": {"foo": true, "bar": false}
+                }
+            ],
+            "properties": {
+                "string": {
+                    "type": "string",
+                    "examples": [
+                        "s010_cave"
+                    ],
+                    "maxLength": 15
+                },
+                "number": {
+                    "type": "integer",
+                    "default": 0,
+                    "minimum": 0,
+                    "exclusiveMaximum": 100
+                },
+                "array": {
+                    "type": "array",
+                    "items": {
+                        "type": "number"
+                    },
+                    "uniqueItems": true,
+                    "minItems": 1
+                },
+                "dict": {
+                    "type": "object",
+                    "patternProperties": {
+                        ".*": {
+                            "type": "boolean"
+                        }
+                    },
+                    "minProperties": 2,
+                    "maxProperties": 2
+                }
+            },
+            "required": [
+                "string",
+                "number",
+                "array",
+                "dict"
+            ]
         }
     },
     "additionalProperties": false,
@@ -128,27 +186,12 @@
         "dict_definition": {
             "type": "object",
             "additionalProperties": false,
-            "title": "Title",
-            "description": "A description of the schema.",
-            "default": {
-                "nested_ref": "s010_cave",
-                "number": 0
-            },
-            "examples": [
-                {
-                    "nested_ref": "s020_magma",
-                    "number": 1
-                }
-            ],
             "properties": {
                 "nested_ref": {
                     "$ref": "#/$defs/scenario_name"
                 },
                 "number": {
-                    "type": "integer",
-                    "default": 0,
-                    "minimum": 0,
-                    "exclusiveMaximum": 100
+                    "type": "integer"
                 }
             },
             "required": [
