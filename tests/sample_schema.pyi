@@ -1,6 +1,7 @@
 # This file is generated. Manual changes will be lost
 # fmt: off
 # ruff: noqa
+# mypy: disable-error-code="misc"
 from __future__ import annotations
 
 import typing_extensions as typ

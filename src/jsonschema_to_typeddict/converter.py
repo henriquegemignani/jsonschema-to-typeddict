@@ -362,6 +362,7 @@ def convert_schema_to(schema_path: Path, output: Path, root_name: str) -> None:
     result = """# This file is generated. Manual changes will be lost
 # fmt: off
 # ruff: noqa
+# mypy: disable-error-code="misc"
 from __future__ import annotations
 
 import typing_extensions as typ
