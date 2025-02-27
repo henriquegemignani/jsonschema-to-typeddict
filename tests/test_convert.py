@@ -14,4 +14,7 @@ def test_convert(tmp_path: Path):
     )
     output = tmp_path.joinpath("output.pyi").read_text()
 
+    # Quickly update the file
+    # this.joinpath("sample_schema.pyi").write_text(output); assert False
+
     assert output == expected

@@ -8,11 +8,11 @@ import typing_extensions as typ
 
 
 # Definitions
+
 @typ.final
 class DictDefinition(typ.TypedDict):
     nested_ref: ScenarioName
     number: int
-
 ScenarioName = typ.Literal[
     's010_cave',
     's020_magma',
@@ -24,7 +24,6 @@ ScenarioName = typ.Literal[
     's080_shipyard',
     's090_skybase'
 ]
-
 UnionEnum = typ.Literal[
     'foo',
     2403,
@@ -32,11 +31,10 @@ UnionEnum = typ.Literal[
     None
 ]
 
-
 # Schema entries
+
 class SampleBasicArrayItem(typ.TypedDict, total=False):
     something: float
-
 SampleComplexNonTotalObjectPickupType = typ.Literal[
     'actor',
     'emmi',
