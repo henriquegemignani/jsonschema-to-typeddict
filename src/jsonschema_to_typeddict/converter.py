@@ -241,7 +241,7 @@ def _convert_object_entry(entry_name: str, entry_value: dict, defs: dict) -> Cod
         typed_dict.append("    pass")
 
     merged_dict = "\n".join(typed_dict)
-    block_result += f"{merged_dict}\n"
+    block_result += f"\n{merged_dict}"
 
     desc = entry_value.get("description")
     inline_doc = [desc] if desc is not None else None
@@ -256,7 +256,7 @@ def _convert_enum_entry(entry_name: str, entry_value: dict, defs: dict) -> CodeR
     inline = _snake_case_to_pascal_case(entry_name)
     value_block = ",\n    ".join(values)
     return CodeResult(
-        f"{inline} = typ.Literal[\n    {value_block}\n]\n",
+        f"{inline} = typ.Literal[\n    {value_block}\n]",
         inline,
         _get_docstring(entry_value),
         _get_default(entry_value),
