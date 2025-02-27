@@ -82,4 +82,3 @@ class Sample(typ.TypedDict, total=False):
     complex_dict: dict[ScenarioName | str, ScenarioName | str]
     metadata: SampleMetadata = {'nested_ref': 's010_cave', 'number': 0, 'array': [1.0], 'dict': {'foo': True, 'bar': False}}
     """A description of the schema."""
-
