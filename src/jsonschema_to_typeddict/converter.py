@@ -1,5 +1,6 @@
 import copy
 import json
+import keyword
 import typing
 from pathlib import Path
 
@@ -188,33 +189,54 @@ def _block_docstring(docstring: list[str]) -> list[str]:
     return result
 
 
+def _typed_dict_prologue(type_name: str, is_total: bool, has_invalid_identifiers: bool) -> str:
+    """The first line of the TypedDict definition"""
+    if has_invalid_identifiers:
+        return f"{type_name} = typ.TypedDict('{type_name}', {'{'}"
+    elif is_total:
+        return f"class {type_name}(typ.TypedDict):"
+    else:
+        return f"class {type_name}(typ.TypedDict, total=False):"
+
+
+def _typed_dict_epilogue(class_length: int, is_total: bool, has_invalid_identifiers: bool) -> str | None:
+    """The last line of the TypedDict definition"""
+    if has_invalid_identifiers:
+        if is_total:
+            return "})"
+        else:
+            return "}, total=False)"
+    elif class_length == 1:
+        return "    pass"
+    return None
+
+
 def _convert_object_entry(entry_name: str, entry_value: dict, defs: dict) -> CodeResult:
     """Handles that are type = object"""
     block_result = ""
 
     _merge_conditionals_into_main(entry_value)
 
-    properties = entry_value.get("properties", {})
+    properties = typing.cast("dict[str, typing.Any]", entry_value.get("properties", {}))
     additionalProperties = entry_value.get("additionalProperties", True)
     patternProperties = entry_value.get("patternProperties", {})
+    properties.pop("$schema", None)  # ignore the schema field, as it's invalid syntax and not interesting
 
     if not properties and (patternProperties or isinstance(additionalProperties, dict)):
         return _convert_true_dict(entry_name, entry_value, defs)
 
+    has_invalid_identifiers = any(not name.isidentifier() or keyword.iskeyword(name) for name in properties)
+
     typed_dict = []
-    if not additionalProperties:
+    if not (has_invalid_identifiers or additionalProperties):
         typed_dict.append("@typ.final")
 
     required_fields = entry_value.get("required", [])
-    properties.pop("$schema", None)  # ignore the schema field, as it's invalid syntax and not interesting
 
     type_name = _snake_case_to_pascal_case(entry_name)
     is_total = len(required_fields) > len(properties) - len(required_fields)
 
-    if is_total:
-        typed_dict.append(f"class {type_name}(typ.TypedDict):")
-    else:
-        typed_dict.append(f"class {type_name}(typ.TypedDict, total=False):")
+    typed_dict.append(_typed_dict_prologue(type_name, is_total, has_invalid_identifiers))
 
     docstring = _get_docstring(entry_value)
     typed_dict.extend(_block_docstring(docstring))
@@ -234,12 +256,15 @@ def _convert_object_entry(entry_name: str, entry_value: dict, defs: dict) -> Cod
         if inner.default_value is not NoDefault:
             prop_inline += f" = {repr(inner.default_value)}"
 
-        typed_dict.append(f"    {prop_name}: {prop_inline}")
+        if has_invalid_identifiers:
+            typed_dict.append(f"    '{prop_name}': {prop_inline},")
+        else:
+            typed_dict.append(f"    {prop_name}: {prop_inline}")
+            typed_dict.extend(_block_docstring(inner.inline_docstring))
 
-        typed_dict.extend(_block_docstring(inner.inline_docstring))
-
-    if len(typed_dict) == 1:
-        typed_dict.append("    pass")
+    epilogue = _typed_dict_epilogue(len(typed_dict), is_total, has_invalid_identifiers)
+    if epilogue is not None:
+        typed_dict.append(epilogue)
 
     merged_dict = "\n".join(typed_dict)
     block_result += f"\n{merged_dict}"
@@ -423,5 +448,7 @@ import typing_extensions as typ
 
     if root_name != root.inline:
         result += f"\n{root_name}: typ.TypeAlias = {root.inline}\n"
+    else:
+        result += "\n"
 
     output.write_text(result)
