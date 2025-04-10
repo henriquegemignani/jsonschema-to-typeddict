@@ -8,7 +8,7 @@ NoDefault = object()
 class CodeResult(typing.NamedTuple):
     block: str
     inline: str
-    inline_docstring: str | None
+    inline_docstring: list[str]
     default_value: typing.Any
 
 
@@ -63,7 +63,7 @@ def _convert_union(entry_name: str, alternatives: list, defs: dict) -> CodeResul
             block_result += f"{inner.block}\n"
         nested_inlines.append(inner.inline)
 
-    return CodeResult(block_result, " | ".join(nested_inlines), None, None)
+    return CodeResult(block_result, " | ".join(nested_inlines), [], None)
 
 
 def _range_metadata(
@@ -244,7 +244,7 @@ def _convert_object_entry(entry_name: str, entry_value: dict, defs: dict) -> Cod
     block_result += f"\n{merged_dict}"
 
     desc = entry_value.get("description")
-    inline_doc = [desc] if desc is not None else None
+    inline_doc = [desc] if isinstance(desc, str) else []
 
     return CodeResult(block_result, type_name, inline_doc, _get_default(entry_value))
 
