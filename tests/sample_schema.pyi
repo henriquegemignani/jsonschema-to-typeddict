@@ -30,6 +30,7 @@ UnionEnum = typ.Literal[
     12.34,
     None
 ]
+UnionTypes: typ.TypeAlias = str | None
 
 # Schema entries
 

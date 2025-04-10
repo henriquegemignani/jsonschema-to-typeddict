@@ -1,3 +1,4 @@
+import copy
 import json
 import typing
 from pathlib import Path
@@ -8,7 +9,7 @@ NoDefault = object()
 class CodeResult(typing.NamedTuple):
     block: str
     inline: str
-    inline_docstring: str | None
+    inline_docstring: list[str]
     default_value: typing.Any
 
 
@@ -63,7 +64,7 @@ def _convert_union(entry_name: str, alternatives: list, defs: dict) -> CodeResul
             block_result += f"{inner.block}\n"
         nested_inlines.append(inner.inline)
 
-    return CodeResult(block_result, " | ".join(nested_inlines), None, None)
+    return CodeResult(block_result, " | ".join(nested_inlines), [], None)
 
 
 def _range_metadata(
@@ -244,7 +245,7 @@ def _convert_object_entry(entry_name: str, entry_value: dict, defs: dict) -> Cod
     block_result += f"\n{merged_dict}"
 
     desc = entry_value.get("description")
-    inline_doc = [desc] if desc is not None else None
+    inline_doc = [desc] if isinstance(desc, str) else []
 
     return CodeResult(block_result, type_name, inline_doc, _get_default(entry_value))
 
@@ -350,19 +351,37 @@ def _convert_schema_entry(entry_name: str, entry_value: dict, defs: dict) -> Cod
     if "enum" in entry_value:
         return _convert_enum_entry(entry_name, entry_value, defs)
 
-    entry_type = entry_value.get("type")
+    entry_types = entry_value.get("type")
+    if entry_types is None:
+        raise ValueError(f"{entry_name} has no type defined")
+
+    if isinstance(entry_types, list):
+        alternatives: list[dict] = []
+        for entry_type in entry_types:
+            alternative = copy.copy(entry_value)
+            alternative["type"] = entry_type
+            alternatives.append(alternative)
+        return _convert_union(entry_name, alternatives, defs)
+
+    return _convert_single_schema_entry(entry_name, entry_value, defs)
+
+
+def _convert_single_schema_entry(entry_name: str, entry_value: dict, defs: dict) -> CodeResult:
+    entry_type = entry_value["type"]
     match entry_type:
         case "array":
-            return _convert_array_entry(entry_name, entry_value, defs)
+            result = _convert_array_entry(entry_name, entry_value, defs)
 
         case "object":
-            return _convert_object_entry(entry_name, entry_value, defs)
+            result = _convert_object_entry(entry_name, entry_value, defs)
 
         case _:
             if entry_type not in PRIMITIVE_TYPES:
                 msg = f"Invalid entry at {entry_name}: unknown type {entry_type}"
                 raise ValueError(msg)
-            return _convert_primitive_entry(entry_name, entry_value, defs)
+            result = _convert_primitive_entry(entry_name, entry_value, defs)
+
+    return result
 
 
 def convert_schema_to(schema_path: Path, output: Path, root_name: str) -> None:
