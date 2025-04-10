@@ -179,6 +179,20 @@
                 "array",
                 "dict"
             ]
+        },
+        "invalid_identifiers": {
+            "type": "object",
+            "properties": {
+                "if": {
+                    "type": "boolean"
+                },
+                "Two Words": {
+                    "type": "string"
+                },
+                "2": {
+                    "type": "integer"
+                }
+            }
         }
     },
     "additionalProperties": false,

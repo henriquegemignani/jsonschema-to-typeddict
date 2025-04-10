@@ -72,6 +72,12 @@ class SampleMetadata(typ.TypedDict):
     array: typ.Annotated[list[float], 'len() >= 1', 'Unique items']
     dict: typ.Annotated[dict[str, bool], 'len() == 2']
 
+SampleInvalidIdentifiers = typ.TypedDict('SampleInvalidIdentifiers', {
+    'if': bool,
+    'Two Words': str,
+    '2': int,
+}, total=False)
+
 @typ.final
 class Sample(typ.TypedDict, total=False):
     basic_dict: dict[ScenarioName, str]
@@ -81,3 +87,5 @@ class Sample(typ.TypedDict, total=False):
     complex_dict: dict[ScenarioName | str, ScenarioName | str]
     metadata: SampleMetadata = {'nested_ref': 's010_cave', 'number': 0, 'array': [1.0], 'dict': {'foo': True, 'bar': False}}
     """A description of the schema."""
+
+    invalid_identifiers: SampleInvalidIdentifiers
