@@ -448,7 +448,7 @@ import typing_extensions as typ
 
     if root_name != root.inline:
         result += f"\n{root_name}: typ.TypeAlias = {root.inline}\n"
-    else:
+    elif result[-1] != "\n":
         result += "\n"
 
     output.write_text(result)
